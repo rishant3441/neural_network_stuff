@@ -98,9 +98,7 @@ namespace NN
                 bias(i,0) -= rate*(b.coeff(i,0));
             }
 
-#ifdef NN_DEBUG
             PrintResults();
-#endif
         }
     }
 
