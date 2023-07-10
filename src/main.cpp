@@ -4,6 +4,9 @@
 #include <vector>
 #include <array>
 
+#define NN_DEBUG
+#include "NeuralNetwork.hpp"
+
 using aMatrix = Eigen::Matrix<float, 2, 1>;
 using wMatrix = Eigen::Matrix<float, 1, 2>;
 using bMatrix = Eigen::Matrix<float, 1, 1>;
@@ -52,7 +55,7 @@ void derivative_cost(wMatrix weights, bMatrix bias, float eps, const TrainingDat
     b->coeffRef(0,0) = (cost(weights, b1, data) - c)/eps;
 }
 
-int main()
+int main1()
 {
     Eigen::Matrix<float, 1, 2> weights;
     Eigen::Matrix<float, 1, 1> bias;
@@ -79,7 +82,7 @@ int main()
     nand_gate.activations[1] << 1, 0;
     nand_gate.activations[2] << 0, 1;
     nand_gate.activations[3] << 1, 1;
-    nand_gate.results = { 1, 0, 0, 0 };
+    nand_gate.results = { 1, 1, 1, 0 };
     
     TrainingData xor_gate;
     xor_gate.activations[0] << 0, 0;
@@ -127,4 +130,53 @@ int main()
         std::cout << "Result " << i << ": " << sigM << std::endl;
     }
     std::cout << "Cost: " << cost(weights, bias, data) << std::endl;
+}
+
+int main()
+{
+    int layout[2] = { 2, 1 };
+    NN::TrainingData or_gate(4, layout);
+    or_gate.inputs[0] << 0, 0;
+    or_gate.inputs[1] << 1, 0;
+    or_gate.inputs[2] << 0, 1;
+    or_gate.inputs[3] << 1, 1;
+    or_gate.outputs[0] << 0;
+    or_gate.outputs[1] << 1;
+    or_gate.outputs[2] << 1;
+    or_gate.outputs[3] << 1;
+
+    NN::TrainingData and_gate(4, layout);
+    and_gate.inputs[0] << 0, 0;
+    and_gate.inputs[1] << 1, 0;
+    and_gate.inputs[2] << 0, 1;
+    and_gate.inputs[3] << 1, 1;
+    and_gate.outputs[0] << 0;
+    and_gate.outputs[1] << 0;
+    and_gate.outputs[2] << 0;
+    and_gate.outputs[3] << 1;
+
+    NN::TrainingData nand_gate(4, layout);
+    nand_gate.inputs[0] << 0, 0;
+    nand_gate.inputs[1] << 1, 0;
+    nand_gate.inputs[2] << 0, 1;
+    nand_gate.inputs[3] << 1, 1;
+    nand_gate.outputs[0] << 1;
+    nand_gate.outputs[1] << 1;
+    nand_gate.outputs[2] << 1;
+    nand_gate.outputs[3] << 0;
+    
+    /*
+    
+    NN::TrainingData xor_gate(4, layout); // WILL NOT WORK
+    xor_gate.inputs[0] << 0, 0;
+    xor_gate.inputs[1] << 1, 0;
+    xor_gate.inputs[2] << 0, 1;
+    xor_gate.inputs[3] << 1, 1;
+    xor_gate.outputs = { 0, 1, 1, 0 };
+
+    */
+
+   NN::BaseNetwork nn(layout, 2, nand_gate, 100*1000);
+   nn.Learn(1e-1, 1e-1);
+   nn.PrintResults();
 }
