@@ -8,7 +8,7 @@ namespace NN
     {
         using aMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
 
-        TrainingData(int size, int layout[])
+        TrainingData(int size, int layout[], int lastIndex)
         {
             for (int i = 0; i < size; i++)
             {
@@ -23,7 +23,7 @@ namespace NN
 
             for (auto& output : outputs)
             {
-                output.resize(layout[1], 1);
+                output.resize(layout[lastIndex], 1);
             }
         }
 
@@ -58,6 +58,37 @@ namespace NN
         wMatrix weights; 
         bMatrix bias;
 
+        float latestCost = 0;
+    };
+
+    class MultiLayeredNetwork
+    {
+    public:
+        MultiLayeredNetwork(int newLayout[], int layoutSize, const TrainingData& data, int epochs = 100*1000);
+
+        using aMatrix = Eigen::Matrix<float, Eigen::Dynamic, 1>;                // Activation Matrix/Vector
+        using wMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;   // Weight Matrix
+        using bMatrix = Eigen::Matrix<float, Eigen::Dynamic, 1>;                // Bias Matrix/Vector
+        using dMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;   // Dynamic Matrix
+
+        void Learn(float eps = 1e-1, float rate = 1e-1);
+        void PrintResults();
+
+    private:
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> forward(const std::vector<wMatrix>& weights, const std::vector<bMatrix>& bias, const aMatrix& input);
+
+        float cost(const std::vector<wMatrix>& weights, const std::vector<bMatrix>& bias, const TrainingData& data);
+        void derivative_cost(float eps, std::vector<wMatrix>* weightP, std::vector<bMatrix>* biasP);
+
+        static float sigmoidf(float x);
+
+        std::vector<wMatrix> weightArray;
+        std::vector<bMatrix> biasArray;        
+
+        std::vector<int> layout;
+
+        TrainingData data;
+        int epochs;
         float latestCost = 0;
     };
 }
