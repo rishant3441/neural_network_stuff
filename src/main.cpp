@@ -40,7 +40,7 @@ int main()
     nand_gate.outputs[2] << 1;
     nand_gate.outputs[3] << 0;
     
-    NN::TrainingData xor_gate(4, layout, 2); // WILL NOT WORK
+    NN::TrainingData xor_gate(4, layout, 2);
     xor_gate.inputs[0] << 0, 0;
     xor_gate.inputs[1] << 1, 0;
     xor_gate.inputs[2] << 0, 1;
