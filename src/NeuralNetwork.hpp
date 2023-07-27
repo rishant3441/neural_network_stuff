@@ -31,6 +31,16 @@ namespace NN
         std::vector<aMatrix> outputs;
     };
 
+    enum class ActF
+    {
+        SIGMOID = 0, RELU, SOFTMAX
+    };
+
+    enum class CostF
+    {
+        MSE = 0, CROSS_ENTROPY
+    };
+
     // Layout in the form of [first layer # of neurons, 2nd layer, etc.]
     // Currently only works with a 2 layer system (input and output)
     class BaseNetwork
@@ -64,7 +74,7 @@ namespace NN
     class MultiLayeredNetwork
     {
     public:
-        MultiLayeredNetwork(int newLayout[], int layoutSize, const TrainingData& data, int epochs = 100*1000);
+        MultiLayeredNetwork(int newLayout[], int layoutSize, const TrainingData& data, ActF acts[], int epochs = 100*1000, CostF costF = CostF::MSE);
 
         using aMatrix = Eigen::Matrix<float, Eigen::Dynamic, 1>;                // Activation Matrix/Vector
         using wMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;   // Weight Matrix
@@ -81,14 +91,18 @@ namespace NN
         void derivative_cost(float eps, std::vector<wMatrix>* weightP, std::vector<bMatrix>* biasP);
 
         static float sigmoidf(float x);
+        static float reluf(float x);
+        static aMatrix softmaxf(const aMatrix& x);
 
         std::vector<wMatrix> weightArray;
         std::vector<bMatrix> biasArray;        
 
         std::vector<int> layout;
+        std::vector<ActF> activations;
 
         TrainingData data;
         int epochs;
         float latestCost = 0;
+        CostF costF;
     };
 }

@@ -9,6 +9,7 @@
 int main()
 {
     int layout[3] = { 2, 2, 1 };
+    NN::ActF actFs[] = { NN::ActF::SIGMOID, NN::ActF::SIGMOID };
 
     NN::TrainingData or_gate(4, layout, 2);
     or_gate.inputs[0] << 0, 0;
@@ -50,11 +51,11 @@ int main()
     xor_gate.outputs[2] << 1;
     xor_gate.outputs[3] << 0;
 
-   NN::MultiLayeredNetwork or_nn(layout, 3, or_gate, 10*1000);
+   NN::MultiLayeredNetwork or_nn(layout, 3, or_gate, actFs, 10*1000, NN::CostF::MSE);
    or_nn.Learn(1e-1, 1e-1);
    or_nn.PrintResults();
 
-   NN::MultiLayeredNetwork xor_nn(layout, 3, xor_gate, 100*1000);
+   NN::MultiLayeredNetwork xor_nn(layout, 3, xor_gate, actFs, 100*1000, NN::CostF::MSE);
    xor_nn.Learn(1e-1, 1e-1);
    xor_nn.PrintResults();
 }

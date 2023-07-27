@@ -1,6 +1,10 @@
 #include "NeuralNetwork.hpp"
 
 #include <iostream>
+#include <algorithm>
+#include <vector>
+#include <array>
+#include <cassert>
 
 namespace NN
 {
@@ -23,6 +27,7 @@ namespace NN
     float BaseNetwork::sigmoidf(float x)
     {
         return 1 / (1 + std::exp(-x));
+        //return std::max(0.0f, x);
     }
 
     float BaseNetwork::cost(const wMatrix& weights, const bMatrix& bias, const TrainingData& data)
@@ -118,13 +123,19 @@ namespace NN
         std::cout << "Cost: " << (latestCost ? latestCost : cost(weights, bias, data)) << std::endl; 
     }
         
-    MultiLayeredNetwork::MultiLayeredNetwork(int newLayout[], int layoutSize, const TrainingData& data, int epochs)
-        : data(data), epochs(epochs)
+    MultiLayeredNetwork::MultiLayeredNetwork(int newLayout[], int layoutSize, const TrainingData& data, ActF acts[], int epochs, CostF costF)
+        : data(data), epochs(epochs), costF(costF)
     {
         layout.reserve(layoutSize);
         for (int i = 0; i < layoutSize; i++)
         {
             layout.push_back(newLayout[i]);
+        }
+
+        activations.reserve(layoutSize - 1);
+        for (int i = 0; i < layoutSize - 1; i++)
+        {
+            activations.push_back(acts[i]);
         }
 
         for (int i = 0; i < layoutSize - 1; i++)
@@ -153,6 +164,20 @@ namespace NN
             sResult.resize(weights[i].rows(), result.cols());
             sResult = newResult.unaryExpr(&MultiLayeredNetwork::sigmoidf);
 
+            switch (activations[i])
+            {
+                case ActF::SIGMOID:
+                    sResult = newResult.unaryExpr(&sigmoidf);
+                    break;
+                case ActF::RELU:
+                    sResult = newResult.unaryExpr(&reluf);
+                    break;
+                case ActF::SOFTMAX:
+                    sResult = softmaxf(newResult);
+                    break;
+                default:
+                    sResult = newResult.unaryExpr(&sigmoidf);
+            }
 
             result.resize(sResult.rows(), sResult.cols());
             result = sResult;
@@ -169,8 +194,22 @@ namespace NN
             auto result = forward(weights, bias, data.inputs[i]);
             for (int j = 0; j < layout.back(); j++)
             {
-                float d = result(j,0) - data.outputs[i](j,0); 
-                finalResult += d*d;
+                auto& E = data.outputs[i](j,0); // error
+                auto& a = result(j,0); // activation
+                float d;
+                switch (costF)
+                {
+                    case CostF::MSE:
+                        d = a - E; // activation - error 
+                        finalResult += d*d;
+                        break;
+                    case CostF::CROSS_ENTROPY:
+                        if (1-a == 0 || a == 0)
+                            continue;
+                        d = (E * std::log(a)) + (1 - E) * (log(1-a));
+                        finalResult -= d;
+                        break;
+                }
             }
         }
         latestCost = finalResult/data.inputs.size();
@@ -270,7 +309,7 @@ namespace NN
             for (int i = 0; i < data.outputs.size(); i++)
             {
                 auto result = forward(weightArray, biasArray, data.inputs[i]);
-                std::cout << "Result " << i << ": " << result(0,0) << std::endl; // not adaptive to all output types 
+                std::cout << "Result " << i << ": " << result << std::endl; // not adaptive to all output types 
             }
 
             std::cout << "Cost: " << (latestCost ? latestCost : cost(weightArray, biasArray, data)) << std::endl; 
@@ -281,5 +320,28 @@ namespace NN
     float MultiLayeredNetwork::sigmoidf(float x)
     {
         return 1 / (1 + std::exp(-x));
+    }
+
+    float MultiLayeredNetwork::reluf(float x)
+    {
+        return std::max(0.01f * x, x);
+    }
+
+    NN::MultiLayeredNetwork::aMatrix MultiLayeredNetwork::softmaxf(const aMatrix& x)
+    {
+        float sum = 0;
+        
+        aMatrix out = x;
+        for (unsigned int j = 0; j < x.rows(); j++)
+        {
+            sum += std::exp( x(j,0));
+        }
+        
+        for (unsigned int i = 0; i < x.rows(); i++)
+        {
+            out(i,0) = std::exp( x(i,0) )/sum;
+        }
+        
+        return out;
     }
 }
