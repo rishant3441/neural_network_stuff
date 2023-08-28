@@ -100,8 +100,10 @@ int main()
 
     parseData(&data, "mnist_train.csv", 100);     
 
-    NN::MultiLayeredNetwork network(layout, 4, data, activationFs, 100, NN::CostF::CROSS_ENTROPY);
+    NN::MultiLayeredNetwork network(layout, 4, data, activationFs, 500, NN::CostF::CROSS_ENTROPY);
     network.PrintResults();
     network.Learn();
     network.PrintResults();
+    
+    std::cin.get();
 }

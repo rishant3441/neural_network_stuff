@@ -1,10 +1,14 @@
 #include "NeuralNetwork.hpp"
 
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 #include <vector>
 #include <array>
 #include <cassert>
+#include <atomic>
+
+#include <omp.h>
 
 namespace NN
 {
@@ -188,7 +192,8 @@ namespace NN
 
     float MultiLayeredNetwork::cost(const std::vector<wMatrix>& weights, const std::vector<bMatrix>& bias, const TrainingData& data)
     {
-        float finalResult = 0;
+        std::atomic<float> finalResult = 0;
+        #pragma omp parallel for
         for (int i = 0; i < data.inputs.size(); i++)
         {
             auto result = forward(weights, bias, data.inputs[i]);
@@ -296,11 +301,14 @@ namespace NN
                     biasArray[j](k,0) -= rate*(newB[j](k,0));
                 }
             }
+            std::cout << "Completed iteration: " << i+1 << " - Cost: " << latestCost << std::endl;
         }
     }
 
     void MultiLayeredNetwork::PrintResults()
     {
+        std::cout << std::fixed;
+        std::cout << std::setprecision(2); 
         for (int j = 0; j < layout.size() - 1; j++)
         {
             std::cout << "Weights: " << weightArray[j] << std::endl;
@@ -309,7 +317,7 @@ namespace NN
             for (int i = 0; i < data.outputs.size(); i++)
             {
                 auto result = forward(weightArray, biasArray, data.inputs[i]);
-                std::cout << "Result " << i << ": " << result << std::endl; // not adaptive to all output types 
+                std::cout << "Result " << i << ": " << (costF == CostF::CROSS_ENTROPY ? result * 100.0f : result) << std::endl; // not adaptive to all output types 
             }
 
             std::cout << "Cost: " << (latestCost ? latestCost : cost(weightArray, biasArray, data)) << std::endl; 

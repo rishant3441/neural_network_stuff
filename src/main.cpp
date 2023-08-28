@@ -4,10 +4,14 @@
 #include <vector>
 #include <array>
 
+#include <omp.h>
 #include "NeuralNetwork.hpp"
 
 int main()
 {
+    omp_set_dynamic(0);
+    omp_set_num_threads(4);
+
     int layout[3] = { 2, 2, 1 };
     NN::ActF actFs[] = { NN::ActF::SIGMOID, NN::ActF::SIGMOID };
 
