@@ -14,4 +14,5 @@ target_compile_features(nn_mnist_test PRIVATE cxx_std_20)
 target_include_directories(nn_test PUBLIC external/eigen)
 target_include_directories(nn_mnist_test PUBLIC external/eigen external/fast-cpp-csv-parser)
 
+target_link_libraries(nn_test OpenMP::OpenMP_CXX)
 target_link_libraries(nn_mnist_test OpenMP::OpenMP_CXX)
