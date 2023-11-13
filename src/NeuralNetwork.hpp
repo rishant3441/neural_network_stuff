@@ -74,15 +74,18 @@ namespace NN
     class MultiLayeredNetwork
     {
     public:
-        MultiLayeredNetwork(int newLayout[], int layoutSize, const TrainingData& data, ActF acts[], int epochs = 100*1000, CostF costF = CostF::MSE);
+        MultiLayeredNetwork(int newLayout[], int layoutSize, ActF acts[], CostF costF = CostF::MSE);
 
         using aMatrix = Eigen::Matrix<float, Eigen::Dynamic, 1>;                // Activation Matrix/Vector
         using wMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;   // Weight Matrix
         using bMatrix = Eigen::Matrix<float, Eigen::Dynamic, 1>;                // Bias Matrix/Vector
         using dMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;   // Dynamic Matrix
 
-        void Learn(float eps = 1e-1, float rate = 1e-1);
+        void Learn(const TrainingData& trainingData, int theEpochs = 100*100, float eps = 1e-1, float rate = 1e-1);
         void PrintResults();
+
+        void Save(const std::string& filePath);
+        void Load(const std::string& filePath);
 
     private:
         Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> forward(const std::vector<wMatrix>& weights, const std::vector<bMatrix>& bias, const aMatrix& input);

@@ -55,11 +55,17 @@ int main()
     xor_gate.outputs[2] << 1;
     xor_gate.outputs[3] << 0;
 
-   NN::MultiLayeredNetwork or_nn(layout, 3, or_gate, actFs, 10*1000, NN::CostF::MSE);
-   or_nn.Learn(1e-1, 1e-1);
+   NN::MultiLayeredNetwork or_nn(layout, 3, actFs, NN::CostF::MSE);
+   or_nn.Learn(or_gate, 10*1000, 1e-1, 1e-1);
    or_nn.PrintResults();
 
-   NN::MultiLayeredNetwork xor_nn(layout, 3, xor_gate, actFs, 100*1000, NN::CostF::MSE);
-   xor_nn.Learn(1e-1, 1e-1);
-   xor_nn.PrintResults();
+   NN::MultiLayeredNetwork xor_nn(layout, 3, actFs, NN::CostF::MSE);
+   xor_nn.Learn(xor_gate, 100*1000, 1e-1, 1e-1);
+   xor_nn.Save("./xor_nn.json");
+
+   NN::MultiLayeredNetwork test_nn(layout, 3, actFs, NN::CostF::MSE);
+
+   test_nn.Load("./xor_nn.json");
+   test_nn.Learn(xor_gate, 3, 1e-1, 1e-1);
+   test_nn.PrintResults();
 }

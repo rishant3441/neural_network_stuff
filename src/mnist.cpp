@@ -96,14 +96,17 @@ int main()
 {
     int layout[] = { 784, 16, 16, 10 };
     NN::ActF activationFs[] = { NN::ActF::RELU, NN::ActF::RELU, NN::ActF::SOFTMAX };
-    NN::TrainingData data(100, layout, 3);
+    NN::TrainingData data(200, layout, 3);
 
-    parseData(&data, "mnist_train.csv", 100);     
+    parseData(&data, "mnist_train.csv", 200);     
 
-    NN::MultiLayeredNetwork network(layout, 4, data, activationFs, 500, NN::CostF::CROSS_ENTROPY);
+    NN::MultiLayeredNetwork network(layout, 4, activationFs, NN::CostF::CROSS_ENTROPY);
+    network.Load("./mnist.json");
     network.PrintResults();
-    network.Learn();
+    network.Learn(data, 2);
     network.PrintResults();
-    
+
+    network.Save("./mnist.json");
+
     std::cin.get();
 }

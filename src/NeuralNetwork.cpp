@@ -7,11 +7,15 @@
 #include <array>
 #include <cassert>
 #include <atomic>
+#include <fstream>
+
+#include <json.hpp>
 
 #include <omp.h>
 
 namespace NN
 {
+    using nlohmann::json;
     BaseNetwork::BaseNetwork(int newLayout[], int layoutSize, const TrainingData& data, int epochs)
         : data(data), epochs(epochs)
     {
@@ -127,8 +131,8 @@ namespace NN
         std::cout << "Cost: " << (latestCost ? latestCost : cost(weights, bias, data)) << std::endl; 
     }
         
-    MultiLayeredNetwork::MultiLayeredNetwork(int newLayout[], int layoutSize, const TrainingData& data, ActF acts[], int epochs, CostF costF)
-        : data(data), epochs(epochs), costF(costF)
+    MultiLayeredNetwork::MultiLayeredNetwork(int newLayout[], int layoutSize, ActF acts[], CostF costF)
+        : data(1, newLayout, 0), costF(costF)
     {
         layout.reserve(layoutSize);
         for (int i = 0; i < layoutSize; i++)
@@ -264,8 +268,10 @@ namespace NN
         }
     }
 
-    void MultiLayeredNetwork::Learn(float eps, float rate)
+    void MultiLayeredNetwork::Learn(const TrainingData& trainingData, int theEpochs, float eps, float rate)
     {
+        data = trainingData;
+        epochs = theEpochs;  
         for (int i = 0; i < epochs; i++)
         {
             float c = cost(weightArray, biasArray, data);
@@ -351,5 +357,69 @@ namespace NN
         }
         
         return out;
+    }
+
+    void MultiLayeredNetwork::Save(const std::string& filePath)
+    {
+        std::ofstream out(filePath);
+        json array;
+
+        /*std::vector<json> jsons;
+        for (auto& weights : weightArray)
+        {
+            std::vector<double> weight(weights.data(), weights.data() + weights.rows() * weights.cols());
+            array = weight;
+            jsons.push_back(array);
+        }*/
+
+        for (int i = 0; i<weightArray.size(); i++)
+        {
+            std::vector<float> weight(weightArray[i].data(), weightArray[i].data() + weightArray[i].rows() * weightArray[i].cols());
+            array["w" + std::to_string(i)] = weight;
+        }
+
+        for (int i = 0; i < biasArray.size(); i++)
+        {
+
+            std::vector<float> bias(biasArray[i].data(), biasArray[i].data() + biasArray[i].rows() * biasArray[i].cols());
+            array["b" + std::to_string(i)] = bias;
+        }
+
+        out << std::setw(4) << array << std::endl;
+
+        out.close();
+    }
+
+    void MultiLayeredNetwork::Load(const std::string& filePath)
+    {
+        std::ifstream in(filePath);
+        json data = json::parse(in);
+
+        int weightAmount = 0;
+        int biasAmount = 0;
+        for (int i = 0; i < biasArray.size(); i++)
+        {
+            std::vector<float> array = data["b" + std::to_string(i)];
+            float* arrayPtr = array.data();
+
+            biasArray[i] = Eigen::Map<wMatrix>(arrayPtr, biasArray[i].rows(), biasArray[i].cols());
+        }
+        for (int i = biasArray.size(); i < weightArray.size() + biasArray.size(); i++)
+        {
+            std::vector<float> array = data["w" + std::to_string(i - biasArray.size())];
+            float* arrayPtr = array.data();
+
+            weightArray[i - biasArray.size()] = Eigen::Map<wMatrix>(arrayPtr, weightArray[i - biasArray.size()].rows(), weightArray[i - biasArray.size()].cols());
+        }
+/*
+        for (int i = 0; i < data.size(); i++)
+        {
+            std::vector<float> array = data["w" + std::to_string(i)];
+            float* arrayPtr = array.data();
+
+            weightArray[i] = Eigen::Map<wMatrix>(arrayPtr, weightArray[i].rows(), weightArray[i].cols());
+        }
+*/
+        in.close();
     }
 }
