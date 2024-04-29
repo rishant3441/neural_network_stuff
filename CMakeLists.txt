@@ -9,12 +9,20 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(nn_test src/main.cpp src/NeuralNetwork.cpp)
 add_executable(nn_mnist_test src/mnist.cpp src/NeuralNetwork.cpp)
+add_executable(nn_test_bp src/mainBP.cpp src/NeuralNetwork.cpp)
+add_executable(nn_mnist_bp src/mnistBP.cpp src/NeuralNetwork.cpp)
 
 target_compile_features(nn_test PRIVATE cxx_std_20)
 target_compile_features(nn_mnist_test PRIVATE cxx_std_20)
+target_compile_features(nn_test_bp PRIVATE cxx_std_20)
+target_compile_features(nn_mnist_bp PRIVATE cxx_std_20)
 
 target_include_directories(nn_test PUBLIC external/eigen external/json)
 target_include_directories(nn_mnist_test PUBLIC external/eigen external/fast-cpp-csv-parser external/json)
+target_include_directories(nn_test_bp PUBLIC external/eigen external/fast-cpp-csv-parser external/json)
+target_include_directories(nn_mnist_bp PUBLIC external/eigen external/fast-cpp-csv-parser external/json)
 
 target_link_libraries(nn_test OpenMP::OpenMP_CXX)
 target_link_libraries(nn_mnist_test OpenMP::OpenMP_CXX)
+target_link_libraries(nn_test_bp OpenMP::OpenMP_CXX)
+target_link_libraries(nn_mnist_bp OpenMP::OpenMP_CXX)

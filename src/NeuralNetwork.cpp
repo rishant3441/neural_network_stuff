@@ -156,6 +156,9 @@ namespace NN
 
             weightArray[i].setRandom();
             biasArray[i].setRandom();
+
+            float std = sqrtf(2.0f / layout[i]);
+            weightArray[i] = weightArray[i] * std;
         }
     }
 
@@ -311,6 +314,138 @@ namespace NN
         }
     }
 
+void MultiLayeredNetwork::backpropagation(const aMatrix& input, const aMatrix& expectedOutput, std::vector<wMatrix>& weightGradients, std::vector<bMatrix>& biasGradients)
+{
+    std::vector<aMatrix> activations;
+    activations.reserve(layout.size());
+    activations.push_back(input);
+
+    std::vector<dMatrix> zs;
+    zs.reserve(layout.size() - 1);
+
+    dMatrix activation = input;
+    for (int i = 0; i < layout.size() - 1; ++i) {
+        auto z = (weightArray[i] * activation) + biasArray[i];
+        zs.push_back(z);
+        switch(this->activations[i])
+        {
+           case ActF::SIGMOID:
+                activation = z.unaryExpr(&sigmoidf);
+                break;
+            case ActF::RELU:
+                activation = z.unaryExpr(&reluf);
+                break;
+            case ActF::SOFTMAX:
+                activation = softmaxf(z);
+                break;
+        }
+        activations.push_back(activation);
+    }
+
+    std::vector<dMatrix> delta;
+    delta.reserve(layout.size() - 1);
+
+    switch (this->activations.back())
+    {
+        case ActF::SIGMOID:
+            delta.push_back(costDerivative(activations.back(), expectedOutput).cwiseProduct(zs.back().unaryExpr(&sigmoidDerivative)));
+            break;
+        case ActF::RELU:
+            delta.push_back(costDerivative(activations.back(), expectedOutput).cwiseProduct(zs.back().unaryExpr(&reluDerivative)));
+            break;
+        case ActF::SOFTMAX:
+            delta.push_back((costDerivative(activations.back(), expectedOutput).transpose() * softmaxDerivative(zs.back())).transpose());
+            break;
+    }
+
+    for (int l = layout.size() - 2; l > 0; --l) {
+        switch (this->activations[l-1])
+        {
+            case ActF::SIGMOID:
+                delta.push_back((weightArray[l].transpose() * delta.back()).cwiseProduct(zs[l - 1].unaryExpr(&sigmoidDerivative)));
+                break;
+            case ActF::RELU:
+                delta.push_back((weightArray[l].transpose() * delta.back()).cwiseProduct(zs[l - 1].unaryExpr(&reluDerivative)));
+                break;
+            case ActF::SOFTMAX:
+                delta.push_back((((weightArray[l].transpose() * delta.back()).transpose() * softmaxDerivative(zs[l-1]))).transpose());
+                break;
+        }
+    }
+
+    std::reverse(delta.begin(), delta.end());
+
+    weightGradients.clear();
+    biasGradients.clear();
+    weightGradients.reserve(layout.size() - 1);
+    biasGradients.reserve(layout.size() - 1);
+
+    for (int i = 0; i < layout.size() - 1; ++i) {
+        weightGradients.push_back(delta[i] * activations[i].transpose());
+        biasGradients.push_back(delta[i]);
+    }
+}
+
+MultiLayeredNetwork::aMatrix MultiLayeredNetwork::costDerivative(const aMatrix& outputActivations, const aMatrix& expectedOutput) {
+    switch (costF) {
+        case CostF::MSE:
+            return outputActivations - expectedOutput;
+        case CostF::CROSS_ENTROPY:
+            return (outputActivations - expectedOutput).cwiseQuotient((outputActivations.array() * (1.0f - outputActivations.array())).matrix());
+        default:
+            return aMatrix::Zero(outputActivations.rows(), outputActivations.cols());
+    }
+}
+
+void MultiLayeredNetwork::clipGradients(std::vector<wMatrix>& weightGradients, std::vector<bMatrix>& biasGradients, float clipThreshold) {
+    for (int i = 0; i < weightGradients.size(); ++i) {
+        // Compute the norm of the weight gradients for the current layer
+        float weightGradientNorm = weightGradients[i].norm();
+
+        // If the norm exceeds the threshold, scale down the gradients
+        if (weightGradientNorm > clipThreshold) {
+            weightGradients[i] *= (clipThreshold / weightGradientNorm);
+        }
+
+        // Compute the norm of the bias gradients for the current layer
+        float biasGradientNorm = biasGradients[i].norm();
+
+        // If the norm exceeds the threshold, scale down the gradients
+        if (biasGradientNorm > clipThreshold) {
+            biasGradients[i] *= (clipThreshold / biasGradientNorm);
+        }
+    }
+}
+
+void MultiLayeredNetwork::LearnViaBP(const TrainingData& trainingData, int theEpochs, float eps, float rate)
+{
+    data = trainingData;
+    epochs = theEpochs;
+
+    for (int epoch = 0; epoch < epochs; ++epoch) {
+        std::vector<wMatrix> weightGradients;
+        std::vector<bMatrix> biasGradients;
+
+        float totalCost = 0.0f;
+
+        for (size_t i = 0; i < data.inputs.size(); ++i) {
+            backpropagation(data.inputs[i], data.outputs[i], weightGradients, biasGradients);
+
+            clipGradients(weightGradients, biasGradients, 1.0f);
+
+            for (int l = 0; l < layout.size() - 1; ++l) {
+                weightArray[l] -= rate * weightGradients[l];
+                biasArray[l] -= rate * biasGradients[l];
+            }
+
+            float newCost = cost(weightArray,biasArray,data);
+            totalCost += newCost;
+        }
+
+        std::cout << "Epoch " << (epoch + 1) << " - Average Cost: " << (totalCost / data.inputs.size()) << std::endl;
+    }
+}
+
     void MultiLayeredNetwork::PrintResults()
     {
         std::cout << std::fixed;
@@ -357,6 +492,37 @@ namespace NN
         }
         
         return out;
+    }
+
+    float MultiLayeredNetwork::sigmoidDerivative(float x)
+    {
+        float sigmoid = sigmoidf(x);
+        return sigmoid * (1 - sigmoid);
+    }
+
+    float MultiLayeredNetwork::reluDerivative(float x)
+    {
+        return (x > 0.0f) ? 1.0f : 0.01f; // Derivative of ReLU is 1 for x > 0, 0 otherwise
+    }               
+
+    MultiLayeredNetwork::dMatrix MultiLayeredNetwork::softmaxDerivative(const aMatrix& x)
+    {
+        aMatrix softmax = softmaxf(x);
+        int size = x.rows();
+
+        dMatrix derivative(size, size);
+
+        for (int i = 0; i < size; ++i) {
+            for (int j = 0; j < size; ++j) {
+                if (i == j) {
+                    derivative(i, j) = softmax(i) * (1 - softmax(i));
+                } else {
+                    derivative(i, j) = -softmax(i) * softmax(j);
+                }
+            }
+        }
+
+        return derivative;
     }
 
     void MultiLayeredNetwork::Save(const std::string& filePath)

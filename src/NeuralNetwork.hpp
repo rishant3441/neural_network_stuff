@@ -82,6 +82,7 @@ namespace NN
         using dMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;   // Dynamic Matrix
 
         void Learn(const TrainingData& trainingData, int theEpochs = 100*100, float eps = 1e-1, float rate = 1e-1);
+        void LearnViaBP(const TrainingData& trainingData, int theEpochs = 100*100, float eps=1e-1, float rate=0.002);
         void PrintResults();
 
         void Save(const std::string& filePath);
@@ -97,6 +98,13 @@ namespace NN
         static float reluf(float x);
         static aMatrix softmaxf(const aMatrix& x);
 
+        void backpropagation(const aMatrix& input, const aMatrix& expectedOutput, std::vector<wMatrix>& weightGradients, std::vector<bMatrix>& biasGradients);
+
+        aMatrix costDerivative(const aMatrix& outputActivations, const aMatrix& expectedOutput); 
+        static float sigmoidDerivative(float x);
+        static float reluDerivative(float x);               
+        dMatrix softmaxDerivative(const aMatrix& x);
+        void clipGradients(std::vector<wMatrix>& weightGradients, std::vector<bMatrix>& biasGradients, float clipThreshold);
         std::vector<wMatrix> weightArray;
         std::vector<bMatrix> biasArray;        
 
